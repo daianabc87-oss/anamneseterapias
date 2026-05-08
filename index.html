@@ -751,6 +751,18 @@ input[type=range]::-webkit-slider-thumb {
   </div>
 </div>
 
+<div id="submit-wrap" style="display:none;text-align:center;margin-top:24px">
+  <button class="btn btn-next" id="btn-submit" onclick="submitForm()" style="padding:12px 40px;font-size:15px;letter-spacing:1px">
+    ✨ Enviar ficha
+  </button>
+  <div id="submit-msg" style="display:none;margin-top:16px;padding:14px 20px;background:#fff;border:1px solid var(--border-strong);border-left:3px solid var(--gold);border-radius:8px;font-family:'Cormorant Garamond',serif;font-size:16px;color:var(--brown);font-style:italic">
+    Ficha enviada com sucesso! ✨<br><span style="font-size:13px;font-style:normal;color:var(--brown-light)">Daiana entrará em contato em breve.</span>
+  </div>
+  <div id="submit-err" style="display:none;margin-top:16px;padding:14px 20px;background:#fff;border:1px solid #f5c6cb;border-radius:8px;font-size:14px;color:#721c24">
+    Ocorreu um erro ao enviar. Por favor, tente novamente.
+  </div>
+</div>
+
 <div class="footer-nav">
   <button class="btn btn-prev" id="btn-prev" onclick="prevSec()" style="display:none">← Anterior</button>
   <span class="step-label" id="step-label">Seção 1 de 14</span>
@@ -774,6 +786,51 @@ sections.forEach((s,i)=>{
   navEl.appendChild(btn);
 });
 
+async function submitForm(){
+  const btn = document.getElementById('btn-submit');
+  btn.textContent = 'Enviando...';
+  btn.disabled = true;
+
+  // Collect all form data
+  const data = {};
+  document.querySelectorAll('input[type=text], input[type=date], input[type=email], input[type=tel], textarea').forEach(el=>{
+    if(el.placeholder && !el.value) return;
+    const label = el.closest('.field-group')?.querySelector('.field-label')?.textContent?.trim() || el.placeholder || 'campo';
+    if(el.value) data[label] = (data[label] ? data[label] + ', ' : '') + el.value;
+  });
+  document.querySelectorAll('input[type=radio]:checked, input[type=checkbox]:checked').forEach(el=>{
+    const chip = el.closest('.chip, .emocao-tag, .consent-label, .amb-check');
+    const label = el.closest('.field-group')?.querySelector('.field-label')?.textContent?.trim() || 'opção';
+    const val = chip?.textContent?.trim() || 'sim';
+    data[label] = (data[label] ? data[label] + ', ' : '') + val;
+  });
+  // Ranges
+  document.querySelectorAll('input[type=range]').forEach(el=>{
+    const label = el.closest('.field-group')?.querySelector('.field-label')?.textContent?.trim() || 'escala';
+    data[label] = el.value;
+  });
+
+  try {
+    const res = await fetch('https://formspree.io/f/maqvpoyo', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+      body: JSON.stringify(data)
+    });
+    if(res.ok){
+      document.getElementById('submit-msg').style.display='block';
+      document.getElementById('btn-submit').style.display='none';
+    } else {
+      document.getElementById('submit-err').style.display='block';
+      btn.textContent='✨ Enviar ficha';
+      btn.disabled=false;
+    }
+  } catch(e){
+    document.getElementById('submit-err').style.display='block';
+    btn.textContent='✨ Enviar ficha';
+    btn.disabled=false;
+  }
+}
+
 function goTo(i){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.getElementById('sec-'+sections[i]).classList.add('active');
@@ -785,6 +842,7 @@ function goTo(i){
   document.getElementById('step-label').textContent='Seção '+(i+1)+' de '+sections.length;
   document.getElementById('btn-prev').style.display=i===0?'none':'';
   document.getElementById('btn-next').style.display=i===sections.length-1?'none':'';
+  document.getElementById('submit-wrap').style.display=i===sections.length-1?'block':'none';
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function nextSec(){if(cur<sections.length-1)goTo(cur+1);}
